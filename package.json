@@ -7,15 +7,7 @@
     "dev": "tsx src/index.ts",
     "build:plugins": "for d in plugins/*/; do (cd \"$d\" && npm run dev); done"
   },
-  "dependencies": {
-    "argon2": "^0.44.0",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "mongodb": "^7.5.0",
-    "ws": "^8.21.1"
-  },
   "devDependencies": {
-    "@types/express": "^5.0.6",
     "@types/node": "^26.1.1",
     "tsx": "^4.23.1",
     "typescript": "^5"
