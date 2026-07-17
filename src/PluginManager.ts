@@ -1,3 +1,4 @@
+import { pathToFileURL } from "url";
 import { Command, LoadedPlugin, PluginState } from "../types";
 import { createPluginLogger } from "./PluginLogger";
 
@@ -42,7 +43,7 @@ export class PluginManager {
                 }
 
                 try {
-                    await this.startPlugin(plugin);
+                    await this.startPluginWithDeps(plugin);
                 } catch (err) {
                     console.error(err);
                 }
@@ -90,7 +91,7 @@ export class PluginManager {
         return this.services.has(name);
     }
 
-    async startPlugin(plugin: LoadedPlugin): Promise<void> {
+    private async startPlugin(plugin: LoadedPlugin): Promise<void> {
         if (plugin.state === PluginState.RUNNING) {
             console.error(`plugin "${plugin.name}" is already running!`);
             return;
@@ -128,5 +129,29 @@ export class PluginManager {
         } finally {
             console = oldConsole;
         }
+    }
+
+    async startPluginWithDeps(plugin: LoadedPlugin, checked: string[] = []) {
+        if (checked.includes(plugin.name)) {
+            console.error(`plugin "${plugin.name}" contains a dependency loop`);
+            return;
+        }
+
+        checked.push(plugin.name);
+
+        for (const dependencyName of plugin.dependencies ?? []) {
+            const dependency = this.plugins.find(p => p.name === dependencyName);
+
+            if (!dependency) {
+                console.error(
+                    `dependency "${dependencyName}" is required for plugin "${plugin.name}"`
+                );
+                return;
+            }
+
+            await this.startPluginWithDeps(dependency, checked);
+        }
+
+        await this.startPlugin(plugin);
     }
 }

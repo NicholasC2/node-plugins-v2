@@ -4,7 +4,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsx src/index.ts"
+    "dev": "tsx src/index.ts",
+    "build:plugins": "for d in plugins/*/; do (cd \"$d\" && npm run dev); done"
   },
   "dependencies": {
     "argon2": "^0.44.0",

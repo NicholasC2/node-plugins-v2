@@ -1,6 +1,7 @@
 export interface Plugin {
     name: string;
     version: string;
+    dependencies?: string[];
     start(pluginManager: PluginManager): Promise<void> | void;
     stop(pluginManager: PluginManager): Promise<void> | void;
 }
@@ -43,6 +44,6 @@ export interface PluginManager {
     getService<T>(name: string): T | undefined;
     hasService(name: string): boolean;
 
-    startPlugin(plugin: LoadedPlugin): Promise<void>;
     stopPlugin(plugin: LoadedPlugin): Promise<void>;
+    startPluginWithDeps(plugin: LoadedPlugin, checked?: string[]): Promise<void>;
 }

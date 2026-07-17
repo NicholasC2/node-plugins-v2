@@ -22,7 +22,7 @@ export async function loadPlugins(directory: string): Promise<LoadedPlugin[]> {
 
         try {
             const module = await import(
-                pathToFileURL(path.join(pluginPath)).href
+                `${pathToFileURL(pluginPath).href}?t=${Date.now()}`
             );
 
             const plugin: Plugin = module.default;

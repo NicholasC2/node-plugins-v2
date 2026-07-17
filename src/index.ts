@@ -2,6 +2,8 @@ import readline from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { loadPlugins } from "./PluginLoader";
 import { PluginManager } from "./PluginManager";
+import { PluginState } from "../types";
+import { watch } from "node:fs";
 
 const rl = readline.createInterface({
     input: stdin,
@@ -18,9 +20,10 @@ async function start() {
     const manager = new PluginManager(await loadPlugins("./plugins"));
 
     for(const plugin of manager.plugins) {
+        if(plugin.state === PluginState.RUNNING) continue;
         console.log(`> start "${plugin.name.replaceAll(`"`, `\\"`)}"`);
         try {
-            await manager.startPlugin(plugin);
+            await manager.startPluginWithDeps(plugin);
         } catch {}
     }
 
