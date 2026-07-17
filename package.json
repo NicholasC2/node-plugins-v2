@@ -1,5 +1,5 @@
 {
-  "name": "im-so-lazy",
+  "name": "node-plugins-v2",
   "version": "0.1.0",
   "scripts": {
     "build": "tsc",
