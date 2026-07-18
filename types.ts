@@ -44,6 +44,7 @@ export interface PluginManager {
     getService<T>(name: string): T | undefined;
     hasService(name: string): boolean;
 
-    stopPlugin(plugin: LoadedPlugin): Promise<void>;
-    startPluginWithDeps(plugin: LoadedPlugin, checked?: string[]): Promise<void>;
+
+    startPlugin(plugin: LoadedPlugin, checked: Set<string>): Promise<void>;
+    stopPlugin(plugin: LoadedPlugin, manager: PluginManager): Promise<void>;
 }

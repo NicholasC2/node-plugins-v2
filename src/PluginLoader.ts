@@ -21,34 +21,31 @@ export async function loadPlugins(directory: string): Promise<LoadedPlugin[]> {
         );
 
         try {
-            const module = await import(
-                `${pathToFileURL(pluginPath).href}?t=${Date.now()}`
-            );
-
-            const plugin: Plugin = module.default;
-
-            if (!plugin?.start) {
-                console.warn(
-                    `skipping "${entry.name}": invalid plugin`
-                );
-                continue;
-            }
-
-            const loadedPlugin: LoadedPlugin = {
-                ...plugin,
-                state: PluginState.STOPPED,
-                logs: []
-            };
-
-            plugins.push(loadedPlugin);
-
-        } catch (error) {
-            console.error(
-                `Failed to load plugin ${entry.name}`,
-                error
-            );
-        }
+            plugins.push(await loadPlugin(pluginPath));
+        } catch {}
     }
 
     return plugins;
+}
+
+export async function loadPlugin(filename: string): Promise<LoadedPlugin> {
+    const pluginPath = path.resolve(filename);
+
+    const module = await import(
+        `${pathToFileURL(pluginPath).href}?t=${Date.now()}`
+    );
+
+    const plugin: Plugin = module.default;
+
+    if (!plugin?.start) {
+        throw new Error(`invalid plugin`)
+    }
+
+    const loadedPlugin: LoadedPlugin = {
+        ...plugin,
+        state: PluginState.STOPPED,
+        logs: []
+    };
+
+    return loadedPlugin
 }

@@ -1,4 +1,3 @@
-import { pathToFileURL } from "url";
 import { Command, LoadedPlugin, PluginState } from "../types";
 import { createPluginLogger } from "./PluginLogger";
 
@@ -10,7 +9,7 @@ export class PluginManager {
     private readonly services = new Map<string, unknown>();
 
     constructor(plugins: LoadedPlugin[]) {
-        this.plugins = plugins;
+        this.plugins = [...plugins];
 
         this.registerCommand("help", {
             description: "displays a list of commands",
@@ -43,7 +42,7 @@ export class PluginManager {
                 }
 
                 try {
-                    await this.startPluginWithDeps(plugin);
+                    await this.startPlugin(plugin);
                 } catch (err) {
                     console.error(err);
                 }
@@ -91,31 +90,41 @@ export class PluginManager {
         return this.services.has(name);
     }
 
-    private async startPlugin(plugin: LoadedPlugin): Promise<void> {
-        if (plugin.state === PluginState.RUNNING) {
-            console.error(`plugin "${plugin.name}" is already running!`);
-            return;
+    async startPlugin(plugin: LoadedPlugin, checked = new Set<string>()): Promise<void> {
+        if (checked.has(plugin.name)) {
+            throw new Error(
+                `plugin "${plugin.name}" contains a dependency loop`
+            );
         }
 
-        const oldConsole = console;
+        checked.add(plugin.name);
 
-        console = {
-            ...oldConsole,
-            ...createPluginLogger(plugin)
-        };
+        for (const dependencyName of plugin.dependencies ?? []) {
+            const dependency = this.plugins.find(
+                p => p.name === dependencyName
+            );
 
-        try {
-            await plugin.start(this);
-            plugin.state = PluginState.RUNNING;
-        } catch (err) {
-            plugin.state = PluginState.CRASHED;
-            console.error(err);
-        } finally {
-            console = oldConsole;
+            if (!dependency) {
+                throw new Error(
+                    `dependency "${dependencyName}" is required for plugin "${plugin.name}"`
+                );
+            }
+
+            await this.startPlugin(dependency, checked);
         }
+
+        checked.delete(plugin.name);
+
+        await startPluginAlone(plugin, this);
     }
 
     async stopPlugin(plugin: LoadedPlugin): Promise<void> {
+        if (plugin.state !== PluginState.RUNNING) {
+            throw new Error(
+                `plugin "${plugin.name}" is not running`
+            );
+        }
+
         const oldConsole = console;
 
         console = {
@@ -130,28 +139,27 @@ export class PluginManager {
             console = oldConsole;
         }
     }
+}
 
-    async startPluginWithDeps(plugin: LoadedPlugin, checked: string[] = []) {
-        if (checked.includes(plugin.name)) {
-            console.error(`plugin "${plugin.name}" contains a dependency loop`);
-            return;
-        }
+async function startPluginAlone(plugin: LoadedPlugin, manager: PluginManager) {
+    if (plugin.state === PluginState.RUNNING) {
+        throw new Error(`plugin "${plugin.name}" is already running!`);
+    }
 
-        checked.push(plugin.name);
+    const oldConsole = console;
 
-        for (const dependencyName of plugin.dependencies ?? []) {
-            const dependency = this.plugins.find(p => p.name === dependencyName);
+    console = {
+        ...oldConsole,
+        ...createPluginLogger(plugin)
+    };
 
-            if (!dependency) {
-                console.error(
-                    `dependency "${dependencyName}" is required for plugin "${plugin.name}"`
-                );
-                return;
-            }
-
-            await this.startPluginWithDeps(dependency, checked);
-        }
-
-        await this.startPlugin(plugin);
+    try {
+        await plugin.start(manager);
+        plugin.state = PluginState.RUNNING;
+    } catch (err) {
+        plugin.state = PluginState.CRASHED;
+        throw err;
+    } finally {
+        console = oldConsole;
     }
 }
